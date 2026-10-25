@@ -1,0 +1,21 @@
+[workspace]
+members = [
+    "crates/common",
+    "crates/service",
+    "crates/simd",
+    "crates/storage",
+    "crates/quantization",
+    "crates/filter",
+    "crates/index",
+    "crates/planner",
+    "crates/concurrency",
+    "crates/sharding",
+    "crates/api",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Antigravity"]
+license = "MIT OR Apache-2.0"

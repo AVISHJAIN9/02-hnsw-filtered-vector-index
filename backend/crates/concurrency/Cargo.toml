@@ -1,0 +1,9 @@
+[package]
+name = "hnsw-concurrency"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Read-write concurrency control, lock striping, and tombstone management."
+
+[dependencies]

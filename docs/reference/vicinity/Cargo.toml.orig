@@ -1,0 +1,342 @@
+[package]
+name = "vicinity"
+version = "0.8.1"
+authors = ["Arc <attobop@gmail.com>"]
+edition = "2021"
+rust-version = "1.89"
+description = "Approximate nearest-neighbor search"
+repository = "https://github.com/arclabs561/vicinity"
+documentation = "https://docs.rs/vicinity"
+license = "MIT OR Apache-2.0"
+keywords = ["ann", "hnsw", "vector-search", "similarity", "nearest-neighbor"]
+categories = ["algorithms", "science"]
+exclude = ["data/", "benches/", "docs/", "scripts/", ".github/"]
+
+[workspace]
+
+[lib]
+# Pure rlib for normal Rust usage.
+# PyO3 cdylib is built by maturin (sets PYO3_BUILD_EXTENSION_MODULE=1).
+crate-type = ["rlib"]
+
+[dependencies]
+smallvec = "1.11"
+rand = "0.9"
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+thiserror = "2.0"
+
+# Python bindings (feature-gated; used for ann-benchmarks integration)
+# Note: do NOT enable `pyo3/extension-module` here. It breaks `cargo test --all-features`
+# by disabling libpython linking for test binaries on macOS.
+# Maturin sets `PYO3_BUILD_EXTENSION_MODULE=1` when building wheels.
+#
+# `abi3-py39` builds a stable-ABI wheel that works on CPython 3.9+, so one
+# wheel per platform/arch covers every supported Python version. Caveat:
+# abi3 wheels are not compatible with free-threaded CPython (3.13t+); revisit
+# if/when free-threaded support is requested.
+pyo3 = { version = "0.27.2", optional = true, features = ["abi3-py39"] }
+numpy = { version = "0.27.0", optional = true }
+
+# SIMD primitives (ecosystem crate)
+innr = { version = "0.2.4", optional = true }
+
+# Linear algebra for OPQ Procrustes solver (SVD)
+nalgebra = { version = "0.33", optional = true, default-features = false, features = [
+  "std",
+] }
+
+# Parallel batch search (feature-gated)
+rayon = { version = "1.10", optional = true }
+
+# ID compression primitives (ecosystem crate)
+cnk = { version = "0.2.0", optional = true }
+
+# Hierarchical clustering (EVoC)
+clump = { version = "0.5.3", optional = true }
+
+# Spectral statistics (optional).
+rmt = { version = "0.1.2", optional = true }
+
+# Sketching primitives (cross-polytope LSH, hyperplane hashing)
+sketchir = { version = "0.3.1", optional = true }
+
+# Vector quantization primitives (extracted from `vicinity`)
+qntz = { package = "qntz", version = "0.1.8", optional = true, features = [
+  "simd",
+] }
+
+# Persistence & IO (all optional, gated behind `persistence`)
+postcard = { version = "1.0", optional = true, features = [
+  "use-crc",
+  "alloc",
+  "use-std",
+] }
+durability = { version = "0.6.1", optional = true }
+
+
+# RNG backend for wasm32 (rand -> getrandom needs a JS backend on wasm).
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }
+
+[features]
+default = ["hnsw", "innr"]
+persistence = ["serde", "dep:postcard", "dep:durability"]
+serde = ["dep:serde", "dep:serde_json", "smallvec/serde"]
+hnsw = ["innr"]
+experimental = []
+ivf_pq = [
+  "dep:clump",
+  "dep:nalgebra",
+  "dep:serde",
+  "dep:serde_json",
+  "smallvec/serde",
+]
+diskann = ["dep:serde_json"]
+ivf_avq = ["dep:clump"]
+sng = []
+fresh_graph = []
+curator = []
+emg = []
+range_filtered = ["hnsw"]
+pipnn = []
+vamana = ["hnsw"]
+quantization = ["qntz"]
+benchmark = []
+innr = ["dep:innr"]
+parallel = ["dep:rayon"]
+python = ["dep:pyo3", "dep:numpy", "hnsw"]
+
+# Feature names referenced by cfgs in the extracted code.
+# These are currently mostly organizational toggles.
+nsg = []
+finger = []
+filtered_graph = []
+rp_quant = []
+sparse_mips = []
+lsh = ["dep:sketchir"]
+nsw = []
+sq4 = []
+sq8 = []
+lemur = []
+kdtree = []
+balltree = []
+kmeans_tree = []
+rptree = []
+rmt-spectral = ["dep:rmt"]
+evoc = ["dep:clump"]
+
+id-compression = ["dep:cnk", "cnk/sbits", "cnk/ans"]
+# Quantization sub-features (kept separate so callers can be explicit)
+rabitq = ["qntz", "qntz/rabitq"]
+ivf_rabitq = ["rabitq", "dep:clump", "hnsw"]
+saq = ["qntz", "qntz/ternary"]
+# Re-exported quantizers (from `qntz`)
+qntz = ["dep:qntz"]
+binary_index = ["dep:qntz", "qntz/binary"]
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.5"
+tempfile = "3"
+anyhow = "1.0"
+rankops = "0.1.5"
+
+[[example]]
+name = "ivf_pq_demo"
+path = "examples/ivf_pq_demo.rs"
+required-features = ["ivf_pq"]
+
+[[example]]
+name = "rabitq_demo"
+path = "examples/rabitq_demo.rs"
+required-features = ["rabitq", "hnsw", "quantization"]
+
+[[example]]
+name = "symphonyqg_demo"
+path = "examples/symphonyqg_demo.rs"
+required-features = ["hnsw", "rabitq", "quantization"]
+
+[[example]]
+name = "evoc_demo"
+path = "examples/evoc_demo.rs"
+required-features = ["evoc"]
+
+[[example]]
+name = "sift_benchmark"
+path = "examples/sift_benchmark.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "retrieve_and_rerank"
+path = "examples/retrieve_and_rerank.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "01_basic_search"
+path = "examples/01_basic_search.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "02_measure_recall"
+path = "examples/02_measure_recall.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "03_quick_benchmark"
+path = "examples/03_quick_benchmark.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "04_rigorous_benchmark"
+path = "examples/04_rigorous_benchmark.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "05_normalization_matters"
+path = "examples/05_normalization_matters.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "06_save_and_load"
+path = "examples/06_save_and_load.rs"
+required-features = ["hnsw", "serde"]
+
+[[example]]
+name = "hnsw_benchmark"
+path = "examples/hnsw_benchmark.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "semantic_search_demo"
+path = "examples/semantic_search_demo.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "lid_demo"
+path = "examples/lid_demo.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "lid_outlier_detection"
+path = "examples/lid_outlier_detection.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "dual_branch_demo"
+path = "examples/dual_branch_demo.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "dual_branch_hnsw_demo"
+path = "examples/dual_branch_hnsw_demo.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "glove_benchmark"
+path = "examples/glove_benchmark.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "ann_benchmark"
+path = "examples/ann_benchmark.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "hybrid_search"
+path = "examples/hybrid_search.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "wasm_search"
+path = "examples/wasm_search.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "embedding_pipeline"
+path = "examples/embedding_pipeline.rs"
+required-features = ["hnsw"]
+
+[[example]]
+name = "glove_all_algos"
+path = "examples/glove_all_algos.rs"
+required-features = ["hnsw"]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+[profile.bench]
+lto = "thin"
+codegen-units = 1
+
+[[bench]]
+name = "hnsw"
+harness = false
+
+[[bench]]
+name = "distance"
+harness = false
+
+[[bench]]
+name = "recall"
+harness = false
+
+[[bench]]
+name = "memory"
+harness = false
+
+[[bench]]
+name = "scaling"
+harness = false
+
+[[bench]]
+name = "adsampling"
+harness = false
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+rust_2021_compatibility = { level = "warn", priority = -1 }
+future_incompatible = { level = "warn", priority = -1 }
+nonstandard_style = { level = "warn", priority = -1 }
+# Let Cargo auto-infer feature values from [features] table.
+# Only list non-feature cfgs here (e.g. target-specific).
+unexpected_cfgs = "warn"
+# Documentation lints: temporarily relaxed, enable incrementally
+# missing_docs = "warn"
+# missing_doc_code_examples = "warn"
+# unsafe_code = "warn"  # SIMD and low-level ops require unsafe
+unstable_features = "deny"
+unused_import_braces = "warn"
+# unused_qualifications = "warn"  # Relaxed: explicit paths often improve clarity
+# unused_results = "warn"  # Relaxed: HashSet/HashMap inserts often ignore return value
+# trivial_numeric_casts = "warn"  # Relaxed: explicit casts help with type clarity
+variant_size_differences = "warn"
+unused_extern_crates = "warn"
+unused_lifetimes = "warn"
+semicolon_in_expressions_from_macros = "warn"
+unsafe_op_in_unsafe_fn = "warn"
+unused_macro_rules = "warn"
+
+[lints.clippy]
+correctness = { level = "deny", priority = -1 }
+perf = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+complexity = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+restriction = { level = "allow", priority = -1 }
+unwrap_in_result = "warn"
+unwrap_used = "warn"
+expect_used = "warn"
+mutex_atomic = "warn"
+large_enum_variant = "warn"
+empty_loop = "deny"
+never_loop = "warn"
+doc_markdown = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"
+multiple_crate_versions = "allow"
+wrong_self_convention = "allow"
+module_name_repetitions = "allow"
+

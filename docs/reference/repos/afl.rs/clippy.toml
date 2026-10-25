@@ -1,0 +1,7 @@
+disallowed-macros = [
+    "std::assert",
+    "std::assert_eq",
+    "std::assert_ne",
+    "std::panic",
+]
+doc-valid-idents = ["AFLplusplus"]

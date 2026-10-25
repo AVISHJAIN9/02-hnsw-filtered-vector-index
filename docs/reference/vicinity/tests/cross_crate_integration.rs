@@ -1,0 +1,118 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+//! Cross-crate integration tests.
+//!
+//! These tests verify that cross-crate dependencies work correctly:
+//! - vicinity uses idpaq for ID compression
+//! - All crates compile with their optional dependencies
+//!
+//! # Running These Tests
+//!
+//! ```bash
+//! # Test idpaq integration
+//! cargo test --features id-compression cross_crate
+//! ```
+
+// =============================================================================
+// idpaq Integration
+// =============================================================================
+
+#[cfg(feature = "id-compression")]
+mod idpaq_integration {
+    use vicinity::compression::{DeltaVarintCompressor, IdSetCompressor};
+
+    /// Verify that vicinity correctly delegates to idpaq for compression
+    #[test]
+    fn vicinity_uses_idpaq_compressor() {
+        let compressor = DeltaVarintCompressor::new();
+
+        // This pattern simulates HNSW neighbor lists
+        let neighbor_ids: Vec<u32> = vec![42, 156, 789, 1234, 2345];
+        let universe = 10_000;
+
+        let compressed = compressor.compress_set(&neighbor_ids, universe).unwrap();
+        let decompressed = compressor.decompress_set(&compressed, universe).unwrap();
+
+        assert_eq!(neighbor_ids, decompressed, "Round-trip should preserve IDs");
+    }
+
+    /// Test compression with patterns typical of IVF posting lists
+    #[test]
+    fn ivf_posting_list_pattern() {
+        let compressor = DeltaVarintCompressor::new();
+
+        // IVF posting lists: many IDs from a large universe
+        let posting_list: Vec<u32> = (0..500).map(|i| i * 200).collect();
+        let universe = 100_000;
+
+        let compressed = compressor.compress_set(&posting_list, universe).unwrap();
+        let decompressed = compressor.decompress_set(&compressed, universe).unwrap();
+
+        assert_eq!(posting_list, decompressed);
+
+        // Verify meaningful compression
+        let uncompressed_size = posting_list.len() * 4;
+        let ratio = uncompressed_size as f64 / compressed.len() as f64;
+        assert!(
+            ratio > 1.5,
+            "Should achieve some compression, got {:.2}x",
+            ratio
+        );
+    }
+
+    /// Test edge cases that might occur in ANN indexes
+    #[test]
+    fn ann_edge_cases() {
+        let compressor = DeltaVarintCompressor::new();
+
+        // Single neighbor (common in early HNSW layers)
+        let single: Vec<u32> = vec![5000];
+        let compressed = compressor.compress_set(&single, 10_000).unwrap();
+        let decompressed = compressor.decompress_set(&compressed, 10_000).unwrap();
+        assert_eq!(single, decompressed);
+
+        // Maximum neighbors (M_max in HNSW)
+        let max_neighbors: Vec<u32> = (0..64).map(|i| i * 100).collect();
+        let compressed = compressor.compress_set(&max_neighbors, 10_000).unwrap();
+        let decompressed = compressor.decompress_set(&compressed, 10_000).unwrap();
+        assert_eq!(max_neighbors, decompressed);
+    }
+}
+
+// =============================================================================
+// Feature Compilation Tests
+// =============================================================================
+
+// =============================================================================
+// Dependency Chain Verification
+// =============================================================================
+
+mod dependency_verification {
+    /// Verify the SIMD dependency chain produces correct distance values.
+    ///
+    /// vicinity (innr feature, default) -> innr
+    #[test]
+    fn simd_distance_functions_produce_correct_values() {
+        let a = [1.0_f32, 0.0, 0.0];
+        let b = [0.707_f32, 0.707, 0.0];
+
+        let cos_d = vicinity::distance::cosine_distance(&a, &b);
+        let l2_d = vicinity::distance::l2_distance(&a, &b);
+
+        // Expected cosine distance: 1 - dot(a,b)/(|a|*|b|) = 1 - 0.707/1.0 ≈ 0.293
+        assert!(
+            (cos_d - 0.293).abs() < 0.01,
+            "cosine distance should be ~0.293, got {}",
+            cos_d
+        );
+        // Expected L2: sqrt((1-0.707)^2 + 0.707^2 + 0) = sqrt(0.0859 + 0.4998)
+        //            = sqrt(0.5857) ≈ 0.7653.
+        // Tight bound rules out a wrong-by-a-power-of-two regression
+        // (e.g., returning the squared value ~0.586) that a `> 0.1`
+        // assertion would silently accept.
+        assert!(
+            (l2_d - 0.7653).abs() < 0.001,
+            "l2 distance should be ~0.7653, got {}",
+            l2_d
+        );
+    }
+}

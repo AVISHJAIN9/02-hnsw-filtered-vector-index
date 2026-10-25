@@ -1,0 +1,15 @@
+[package]
+name = "hnsw-storage"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Append-only WAL, memory-mapped checkpoints, and aligned buffer storage."
+
+[dependencies]
+hnsw-common = { path = "../common" }
+parking_lot = "0.12"
+thiserror = "1.0"
+
+[dev-dependencies]
+serial_test = "3.1"

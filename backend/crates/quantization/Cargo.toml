@@ -1,0 +1,9 @@
+[package]
+name = "hnsw-quantization"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Scalar and product quantization with float32 rescoring."
+
+[dependencies]

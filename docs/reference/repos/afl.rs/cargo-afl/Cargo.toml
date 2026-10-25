@@ -1,0 +1,50 @@
+[package]
+name = "cargo-afl"
+version = "0.18.2"
+readme = "README.md"
+license = "Apache-2.0"
+authors = [
+    "Keegan McAllister <mcallister.keegan@gmail.com>",
+    "Corey Farwell <coreyf@rwell.org>",
+    "Samuel Moelius <sam@moeli.us>",
+]
+description = "Fuzzing Rust code with american-fuzzy-lop"
+repository = "https://github.com/rust-fuzz/afl.rs"
+homepage = "https://github.com/rust-fuzz/afl.rs"
+edition = "2024"
+exclude = ["etc"]
+
+[build-dependencies]
+anyhow = { version = "1.0", features = ["backtrace"] }
+clap = "4.6"
+home = "0.5"
+rustc_version = "0.4"
+tempfile = "3.27"
+xdg = "3.0"
+
+cargo-afl-common = { version = "0.18", path = "../cargo-afl-common" }
+
+[dependencies]
+anyhow = { version = "1.0", features = ["backtrace"] }
+clap = { version = "4.6", features = ["cargo", "derive", "string"] }
+home = "0.5"
+rustc_version = "0.4"
+tempfile = "3.27"
+xdg = "3.0"
+
+cargo-afl-common = { version = "0.18", path = "../cargo-afl-common" }
+
+[dev-dependencies]
+assert_cmd = "2.2"
+predicates = "3.1"
+tempfile = "3.27"
+yare = "3.0"
+
+cargo-afl-common = { version = "0.18", path = "../cargo-afl-common" }
+
+[features]
+default = []
+plugins = []
+
+[lints]
+workspace = true

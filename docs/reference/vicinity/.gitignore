@@ -1,0 +1,34 @@
+/target
+.cargo/
+.claude/
+.cursor/
+.ruff_cache/
+
+# Benchmark data (generated)
+/data/
+
+# Python venv
+.venv/
+
+# Generated plots / reports
+/docs/plots/index.html
+/docs/plots/margin_distributions.png
+
+# Python cache artifacts (scripts/)
+__pycache__/
+*.pyc
+*.so
+
+# QA reports (generated)
+qa/
+
+# Local archive (research notes, drafts)
+_archive/
+
+# Proptest regression files (auto-generated)
+**/proptest-regressions/
+
+# Profiling artifacts
+cargo-flamegraph.trace/
+*.svg
+Cargo.lock

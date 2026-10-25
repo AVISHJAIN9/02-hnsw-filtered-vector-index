@@ -1,0 +1,9 @@
+[package]
+name = "hnsw-index"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Core HNSW multi-layer graph structures, construction, and search."
+
+[dependencies]
